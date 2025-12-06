@@ -2,6 +2,7 @@ variable "nsg-security-rules" {
     type = map(object({
       name = string
       destination_port_range = string
+      priority = number
     }))
   
 }

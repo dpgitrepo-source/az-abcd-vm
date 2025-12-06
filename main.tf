@@ -1,6 +1,9 @@
 locals {
   location = "Canada Central"
   name = "abcd"
+
+  app_subnet = [for s in azurerm_subnet.app-subnet : s if startswith(s.name, "app")][0]
+
 }
 
 resource "azurerm_resource_group" "vm-rg" {
@@ -30,7 +33,7 @@ resource "azurerm_network_interface" "vm-nic" {
 
   ip_configuration {
     name                          = "internal"
-    subnet_id                     = azurerm_subnet.app-subnet["app-subnet"]
+    subnet_id                     = azurerm_subnet.app-subnet["app-subnet"].id
     private_ip_address_allocation = "Dynamic"
     public_ip_address_id = azurerm_public_ip.vmip.id
   }
@@ -61,7 +64,7 @@ resource "azurerm_network_security_group" "nsg-vm" {
     for_each = var.nsg-security-rules
     content {
     name                       = security_rule.value.name
-    priority                   = 100
+    priority                   = security_rule.value.priority
     direction                  = "Inbound"
     access                     = "Allow"
     protocol                   = "Tcp"
@@ -75,7 +78,7 @@ resource "azurerm_network_security_group" "nsg-vm" {
 }
 
 resource "azurerm_subnet_network_security_group_association" "nsg-atatched-tosubnet" {
-  subnet_id                 = azurerm_subnet.app-subnet.id
+  subnet_id                 = azurerm_subnet.app-subnet[local.app_subnet.name].id
   network_security_group_id = azurerm_network_security_group.nsg-vm.id
 }
 
@@ -106,4 +109,10 @@ resource "azurerm_linux_virtual_machine" "vm-app" {
     sku       = "22_04-lts"
     version   = "latest"
   }
+}
+
+
+output "app-subnet" {
+  value = local.app_subnet
+  
 }
